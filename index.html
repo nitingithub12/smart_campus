@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -16,6 +15,7 @@
     <main>
         <div class="search-bar">
             <input type="text" id="location-input" placeholder="Search for buildings, classrooms, or events...">
+            <button id="search-button">Search</button>
         </div>
         <div class="map-container">
             <div id="map" style="width: 100%; height: 400px;"></div>
@@ -32,9 +32,12 @@
         <div class="settings">Settings</div>
     </footer>
     <script>
+        let map;
+        let markers = [];
+
         function initMap() {
             // Initialize the map
-            const map = new google.maps.Map(document.getElementById('map'), {
+            map = new google.maps.Map(document.getElementById('map'), {
                 center: { lat: 32.6343408, lng: 75.01036597 },
                 zoom: 15
             });
@@ -48,43 +51,49 @@
                 searchBox.setBounds(map.getBounds());
             });
 
-            searchBox.addListener('places_changed', () => {
-                const places = searchBox.getPlaces();
+            document.getElementById('search-button').addEventListener('click', () => {
+                searchBox.setBounds(map.getBounds());
+                searchBoxPlaces(searchBox);
+            });
+        }
 
-                if (places.length == 0) {
+        function searchBoxPlaces(searchBox) {
+            const places = searchBox.getPlaces();
+
+            if (places.length == 0) {
+                alert("No places found.");
+                return;
+            }
+
+            // Clear out the old markers.
+            markers.forEach(marker => marker.setMap(null));
+            markers = [];
+
+            // For each place, get the icon, name and location.
+            const bounds = new google.maps.LatLngBounds();
+            places.forEach(place => {
+                if (!place.geometry || !place.geometry.location) {
+                    console.log("Returned place contains no geometry");
                     return;
                 }
 
-                // Clear out the old markers.
-                markers.forEach(marker => marker.setMap(null));
-                markers = [];
-
-                // For each place, get the icon, name and location.
-                const bounds = new google.maps.LatLngBounds();
-                places.forEach(place => {
-                    if (!place.geometry || !place.geometry.location) {
-                        console.log("Returned place contains no geometry");
-                        return;
-                    }
-
-                    // Create a marker for each place.
-                    const marker = new google.maps.Marker({
-                        map,
-                        title: place.name,
-                        position: place.geometry.location
-                    });
-
-                    markers.push(marker);
-
-                    if (place.geometry.viewport) {
-                        // Only geocodes have viewport.
-                        bounds.union(place.geometry.viewport);
-                    } else {
-                        bounds.extend(place.geometry.location);
-                    }
+                // Create a marker for each place.
+                const marker = new google.maps.Marker({
+                    map,
+                    title: place.name,
+                    position: place.geometry.location
                 });
-                map.fitBounds(bounds);
+
+                markers.push(marker);
+
+                if (place.geometry.viewport) {
+                    // Only geocodes have viewport.
+                    bounds.union(place.geometry.viewport);
+                } else {
+                    bounds.extend(place.geometry.location);
+                }
             });
+            map.fitBounds(bounds);
         }
 
         window.onload = initMap;
