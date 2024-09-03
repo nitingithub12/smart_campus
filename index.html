@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,15 +5,28 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Smart Campus Navigator</title>
     <link rel="stylesheet" href="styles.css">
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCilupm5HjpxRvsE8RUO4neorgFrXlNg5M&libraries=places"></script>
     <style>
-        #map, #pano {
-            width: 100%;
-            height: 400px;
-            margin-bottom: 10px;
+        /* Add some basic styling */
+        .autocomplete-items {
+            border: 1px solid #d4d4d4;
+            border-bottom: none;
+            border-top: none;
+            z-index: 99;
+            position: absolute;
+            background-color: #fff;
+            max-height: 200px;
+            overflow-y: auto;
         }
-        .search-bar, .navigation-buttons, .ar-mode-btn, .notifications, .settings {
-            margin: 10px;
+        .autocomplete-items div {
+            padding: 10px;
+            cursor: pointer;
+        }
+        .autocomplete-items div:hover {
+            background-color: #e9e9e9;
+        }
+        .autocomplete-active {
+            background-color: DodgerBlue !important;
+            color: #ffffff;
         }
     </style>
 </head>
@@ -26,17 +38,17 @@
     <main>
         <div class="search-bar">
             <input type="text" id="location-input" placeholder="Search for buildings, classrooms, or events...">
-            <button id="search-button">Search</button>
         </div>
         <div class="map-container">
-            <div id="map"></div>
-            <div id="pano"></div> <!-- Street View container -->
-            <button class="ar-mode-btn">AR Mode</button>
+            <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2296.836049800923!2d75.01036597367859!3d32.63434079126731!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x391e9cab06fb5995%3A0xb23406c878acb71d!2sCentral%20University%20Of%20Jammu!5e1!3m2!1sen!2sin!4v1725372543425!5m2!1sen!2sin" width="980" height="410" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+            <div id="map" style="width: 1000px; height: 90px;"></div>
+            <button onclick="arModeFunction()" class="ar-mode-btn">AR Mode</button>
+            <button onclick="view3DFunction()" class="view-3d-btn">Views</button>
+            <button id="class-schedule" onclick="classScheduleFunction()">Class Schedule</button>
+            <button id="sos-button" onclick="sosFunction()">SOS</button>
+            <button id="help-center" onclick="helpCenterFunction()">Help Center</button>
         </div>
         <nav class="navigation-buttons">
-            <button id="class-schedule">Class Schedule</button>
-            <button id="sos-button">SOS</button>
-            <button id="help-center">Help Center</button>
         </nav>
     </main>
     <footer>
@@ -44,85 +56,101 @@
         <div class="settings">Settings</div>
     </footer>
     <script>
-        let map;
-        let panorama;
-        let markers = [];
-
-        function initMap() {
-            map = new google.maps.Map(document.getElementById('map'), {
-                center: { lat: 32.6343408, lng: 75.01036597 },
-                zoom: 15,
-                mapTypeId: google.maps.MapTypeId.ROADMAP
-            });
-
-            panorama = new google.maps.StreetViewPanorama(document.getElementById('pano'), {
-                position: { lat: 32.6343408, lng: 75.01036597 },
-                pov: {
-                    heading: 34,
-                    pitch: 10
-                },
-                visible: false
-            });
-
-            map.addListener('click', (event) => {
-                panorama.setPosition(event.latLng);
-                panorama.setVisible(true);
-            });
-
-            const input = document.getElementById('location-input');
-            const searchBox = new google.maps.places.SearchBox(input);
-
-            map.addListener('bounds_changed', () => {
-                searchBox.setBounds(map.getBounds());
-            });
-
-            searchBox.addListener('places_changed', () => {
-                searchBoxPlaces(searchBox);
-            });
-
-            document.getElementById('search-button').addEventListener('click', () => {
-                searchBoxPlaces(searchBox);
-            });
+        function arModeFunction() {
+            alert("AR feature is activated!");
         }
 
-        function searchBoxPlaces(searchBox) {
-            const places = searchBox.getPlaces();
+        function view3DFunction() {
+            alert("3D Views feature is activated!");
+        }
 
-            if (!places || places.length === 0) {
-                alert("No places found.");
-                return;
+        function classScheduleFunction() {
+            alert("Class Schedule feature is activated!");
+        }
+
+        function sosFunction() {
+            alert("SOS feature is activated!");
+        }
+
+        function helpCenterFunction() {
+            alert("Help Center feature is activated!");
+        }
+
+        // Autocomplete functionality
+        function autocomplete(inp, arr) {
+            let currentFocus;
+            inp.addEventListener("input", function(e) {
+                let a, b, i, val = this.value;
+                closeAllLists();
+                if (!val) { return false;}
+                currentFocus = -1;
+                a = document.createElement("DIV");
+                a.setAttribute("id", this.id + "autocomplete-list");
+                a.setAttribute("class", "autocomplete-items");
+                this.parentNode.appendChild(a);
+                for (i = 0; i < arr.length; i++) {
+                    if (arr[i].substr(0, val.length).toUpperCase() == val.toUpperCase()) {
+                        b = document.createElement("DIV");
+                        b.innerHTML = "<strong>" + arr[i].substr(0, val.length) + "</strong>";
+                        b.innerHTML += arr[i].substr(val.length);
+                        b.innerHTML += "<input type='hidden' value='" + arr[i] + "'>";
+                        b.addEventListener("click", function(e) {
+                            inp.value = this.getElementsByTagName("input")[0].value;
+                            closeAllLists();
+                        });
+                        a.appendChild(b);
+                    }
+                }
+            });
+
+            inp.addEventListener("keydown", function(e) {
+                let x = document.getElementById(this.id + "autocomplete-list");
+                if (x) x = x.getElementsByTagName("div");
+                if (e.keyCode == 40) {
+                    currentFocus++;
+                    addActive(x);
+                } else if (e.keyCode == 38) { 
+                    currentFocus--;
+                    addActive(x);
+                } else if (e.keyCode == 13) {
+                    e.preventDefault();
+                    if (currentFocus > -1) {
+                        if (x) x[currentFocus].click();
+                    }
+                }
+            });
+
+            function addActive(x) {
+                if (!x) return false;
+                removeActive(x);
+                if (currentFocus >= x.length) currentFocus = 0;
+                if (currentFocus < 0) currentFocus = (x.length - 1);
+                x[currentFocus].classList.add("autocomplete-active");
             }
 
-            markers.forEach(marker => marker.setMap(null));
-            markers = [];
-
-            const bounds = new google.maps.LatLngBounds();
-
-            places.forEach(place => {
-                if (!place.geometry || !place.geometry.location) {
-                    console.log("Returned place contains no geometry");
-                    return;
+            function removeActive(x) {
+                for (let i = 0; i < x.length; i++) {
+                    x[i].classList.remove("autocomplete-active");
                 }
+            }
 
-                const marker = new google.maps.Marker({
-                    map,
-                    title: place.name,
-                    position: place.geometry.location
-                });
-
-                markers.push(marker);
-
-                if (place.geometry.viewport) {
-                    bounds.union(place.geometry.viewport);
-                } else {
-                    bounds.extend(place.geometry.location);
+            function closeAllLists(elmnt) {
+                let x = document.getElementsByClassName("autocomplete-items");
+                for (let i = 0; i < x.length; i++) {
+                    if (elmnt != x[i] && elmnt != inp) {
+                        x[i].parentNode.removeChild(x[i]);
+                    }
                 }
+            }
+
+            document.addEventListener("click", function (e) {
+                closeAllLists(e.target);
             });
-            map.fitBounds(bounds);
         }
 
-        window.onload = initMap;
+        const places = ["central university of jammu", "dd building", " isro ", "pmmmmm building", "mathematics department", "education building", "spm hostel", "main gate"];
+
+        autocomplete(document.getElementById("location-input"), places);
     </script>
 </body>
 </html>
-
